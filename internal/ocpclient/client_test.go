@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestDoRequestBasicAuthAndSuccess(t *testing.T) {
@@ -69,5 +71,62 @@ func TestDoRequestOCPErrorIsFormatted(t *testing.T) {
 	}
 	if got := err.Error(); got == "" || got[:8] != "OCP API " {
 		t.Errorf("错误格式不符：%s", got)
+	}
+}
+
+func TestWaitForTaskSuccessful(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		status := "RUNNING"
+		if calls >= 2 {
+			status = "SUCCESSFUL"
+		}
+		_, _ = w.Write([]byte(`{"successful":true,"status":200,"data":{"id":1,"status":"` + status + `","name":"x"}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "u", "p")
+	c.PollingInterval = 10 * time.Millisecond
+	c.PollingTimeout = 1 * time.Second
+	if err := c.WaitForTask(context.Background(), 1); err != nil {
+		t.Fatalf("意外错误：%v", err)
+	}
+	if calls < 2 {
+		t.Errorf("期望至少轮询 2 次，实际 %d", calls)
+	}
+}
+
+func TestWaitForTaskFailed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"successful":true,"status":200,"data":{"id":7,"status":"FAILED","name":"x"}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "u", "p")
+	c.PollingInterval = 5 * time.Millisecond
+	err := c.WaitForTask(context.Background(), 7)
+	if err == nil {
+		t.Fatal("期望返回错误")
+	}
+	if !strings.Contains(err.Error(), "task #7 failed") {
+		t.Errorf("错误信息不符：%q", err.Error())
+	}
+}
+
+func TestWaitForTaskFireAndForget(t *testing.T) {
+	called := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "u", "p")
+	c.TaskMode = TaskModeFireAndForget
+	if err := c.WaitForTask(context.Background(), 99); err != nil {
+		t.Fatalf("意外错误：%v", err)
+	}
+	if called {
+		t.Error("fire-and-forget 模式下不应该发起 HTTP 请求")
 	}
 }
