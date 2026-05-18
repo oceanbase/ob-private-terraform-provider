@@ -8,15 +8,19 @@ import (
 )
 
 type BatchCreateHostParam struct {
-	HostBasicDataList []HostBasicData `json:"hostBasicDataList"`
-	SshPort           int             `json:"sshPort"`
-	Kind              string          `json:"kind"`
-	IdcID             int64           `json:"idcId"`
-	TypeID            int64           `json:"typeId"`
-	CredentialID      int64           `json:"credentialId"`
-	VpcID             *int64          `json:"vpcId,omitempty"`
-	Alias             string          `json:"alias,omitempty"`
-	Description       string          `json:"description,omitempty"`
+	HostBasicDataList   []HostBasicData `json:"hostBasicDataList"`
+	SshPort             int             `json:"sshPort"`
+	Kind                string          `json:"kind"`
+	PublishPorts        []string        `json:"publishPorts,omitempty"`
+	IdcID               int64           `json:"idcId"`
+	TypeID              int64           `json:"typeId"`
+	CredentialID        int64           `json:"credentialId"`
+	Alias               string          `json:"alias,omitempty"`
+	Description         string          `json:"description,omitempty"`
+	MgragentPort        *int            `json:"mgragentPort,omitempty"`
+	MonagentPort        *int            `json:"monagentPort,omitempty"`
+	MonagentCpuQuota    *float64        `json:"monagentCpuQuota,omitempty"`
+	MonagentMemoryQuota *int            `json:"monagentMemoryQuota,omitempty"`
 }
 
 type HostBasicData struct {

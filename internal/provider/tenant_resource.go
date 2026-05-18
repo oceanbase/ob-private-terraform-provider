@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/oceanbase/terraform-provider-oceanbase/internal/ocpclient"
 )
 
@@ -18,21 +19,25 @@ type tenantResource struct{ client *ocpclient.Client }
 func NewTenantResource() resource.Resource { return &tenantResource{} }
 
 type tenantModel struct {
-	ID                types.String      `tfsdk:"id"`
-	ClusterID         types.Int64       `tfsdk:"cluster_id"`
-	Name              types.String      `tfsdk:"name"`
-	RootPassword      types.String      `tfsdk:"root_password"`
-	Mode              types.String      `tfsdk:"mode"`
-	PrimaryZone       types.String      `tfsdk:"primary_zone"`
-	Charset           types.String      `tfsdk:"charset"`
-	Collation         types.String      `tfsdk:"collation"`
-	Whitelist         types.String      `tfsdk:"whitelist"`
-	Description       types.String      `tfsdk:"description"`
-	EnableArbitration types.Bool        `tfsdk:"enable_arbitration"`
-	ClientToken       types.String      `tfsdk:"client_token"`
-	Zones             []tenantZoneModel `tfsdk:"zones"`
-	Parameters        []kvModel         `tfsdk:"parameters"`
-	Status            types.String      `tfsdk:"status"`
+	ID                   types.String      `tfsdk:"id"`
+	ClusterID            types.Int64       `tfsdk:"cluster_id"`
+	Name                 types.String      `tfsdk:"name"`
+	RootPassword         types.String      `tfsdk:"root_password"`
+	Mode                 types.String      `tfsdk:"mode"`
+	PrimaryZone          types.String      `tfsdk:"primary_zone"`
+	Charset              types.String      `tfsdk:"charset"`
+	Collation            types.String      `tfsdk:"collation"`
+	Whitelist            types.String      `tfsdk:"whitelist"`
+	TimeZone             types.String      `tfsdk:"time_zone"`
+	Description          types.String      `tfsdk:"description"`
+	EnableArbitration    types.Bool        `tfsdk:"enable_arbitration"`
+	SkipImportTenantInfo types.Bool        `tfsdk:"skip_import_tenant_info"`
+	ServiceName          types.String      `tfsdk:"service_name"`
+	LoadType             types.String      `tfsdk:"load_type"`
+	ClientToken          types.String      `tfsdk:"client_token"`
+	Zones                []tenantZoneModel `tfsdk:"zones"`
+	Parameters           []kvModel         `tfsdk:"parameters"`
+	Status               types.String      `tfsdk:"status"`
 }
 
 type tenantZoneModel struct {
@@ -59,19 +64,23 @@ func (r *tenantResource) Metadata(_ context.Context, req resource.MetadataReques
 func (r *tenantResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":                 schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
-			"cluster_id":         schema.Int64Attribute{Required: true},
-			"name":               schema.StringAttribute{Required: true},
-			"root_password":      schema.StringAttribute{Required: true, Sensitive: true},
-			"mode":               schema.StringAttribute{Optional: true},
-			"primary_zone":       schema.StringAttribute{Optional: true},
-			"charset":            schema.StringAttribute{Optional: true},
-			"collation":          schema.StringAttribute{Optional: true},
-			"whitelist":          schema.StringAttribute{Optional: true},
-			"description":        schema.StringAttribute{Optional: true},
-			"enable_arbitration": schema.BoolAttribute{Optional: true},
-			"client_token":       schema.StringAttribute{Optional: true},
-			"status":             schema.StringAttribute{Computed: true},
+			"id":                      schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
+			"cluster_id":              schema.Int64Attribute{Required: true},
+			"name":                    schema.StringAttribute{Required: true, Description: "Tenant name, must match ^[a-zA-Z][a-zA-Z_0-9]{1,63}$"},
+			"root_password":           schema.StringAttribute{Required: true, Sensitive: true},
+			"mode":                    schema.StringAttribute{Optional: true, Description: "MYSQL (default) or ORACLE"},
+			"primary_zone":            schema.StringAttribute{Optional: true},
+			"charset":                 schema.StringAttribute{Optional: true},
+			"collation":               schema.StringAttribute{Optional: true},
+			"whitelist":               schema.StringAttribute{Optional: true},
+			"time_zone":               schema.StringAttribute{Optional: true},
+			"description":             schema.StringAttribute{Optional: true},
+			"enable_arbitration":      schema.BoolAttribute{Optional: true},
+			"skip_import_tenant_info": schema.BoolAttribute{Optional: true, Description: "Whether to skip importing srs / time_zone info"},
+			"service_name":            schema.StringAttribute{Optional: true, Description: "Tenant service name"},
+			"load_type":               schema.StringAttribute{Optional: true, Description: "Tenant load type"},
+			"client_token":            schema.StringAttribute{Optional: true, Description: "Idempotency token, length 8-64"},
+			"status":                  schema.StringAttribute{Computed: true},
 			"zones": schema.ListNestedAttribute{
 				Required: true,
 				NestedObject: schema.NestedAttributeObject{
@@ -108,7 +117,7 @@ func (r *tenantResource) Configure(_ context.Context, req resource.ConfigureRequ
 	}
 	c, ok := req.ProviderData.(*ocpclient.Client)
 	if !ok {
-		resp.Diagnostics.AddError("Provider 数据类型异常", fmt.Sprintf("实际收到 %T", req.ProviderData))
+		resp.Diagnostics.AddError("Unexpected provider data type", fmt.Sprintf("expected *ocpclient.Client, got %T", req.ProviderData))
 		return
 	}
 	r.client = c
@@ -137,26 +146,32 @@ func (r *tenantResource) Create(ctx context.Context, req resource.CreateRequest,
 			Name: p.Name.ValueString(), Value: p.Value.ValueString(), ParameterType: p.ParameterType.ValueString(),
 		})
 	}
+	tflog.Info(ctx, "creating resource", map[string]interface{}{"type": "oceanbase_ob_tenant", "name": plan.Name.ValueString()})
 	_, tenantID, err := r.client.CreateTenant(ctx, plan.ClusterID.ValueInt64(), ocpclient.CreateTenantParam{
-		Name:              plan.Name.ValueString(),
-		Mode:              plan.Mode.ValueString(),
-		PrimaryZone:       plan.PrimaryZone.ValueString(),
-		Charset:           plan.Charset.ValueString(),
-		Collation:         plan.Collation.ValueString(),
-		Whitelist:         plan.Whitelist.ValueString(),
-		Description:       plan.Description.ValueString(),
-		RootPassword:      plan.RootPassword.ValueString(),
-		EnableArbitration: plan.EnableArbitration.ValueBool(),
-		Zones:             zones,
-		Parameters:        params,
-		ClientToken:       plan.ClientToken.ValueString(),
+		Name:                 plan.Name.ValueString(),
+		Mode:                 plan.Mode.ValueString(),
+		PrimaryZone:          plan.PrimaryZone.ValueString(),
+		Charset:              plan.Charset.ValueString(),
+		Collation:            plan.Collation.ValueString(),
+		Whitelist:            plan.Whitelist.ValueString(),
+		TimeZone:             plan.TimeZone.ValueString(),
+		Description:          plan.Description.ValueString(),
+		RootPassword:         plan.RootPassword.ValueString(),
+		EnableArbitration:    plan.EnableArbitration.ValueBool(),
+		SkipImportTenantInfo: plan.SkipImportTenantInfo.ValueBool(),
+		ServiceName:          plan.ServiceName.ValueString(),
+		LoadType:             plan.LoadType.ValueString(),
+		Zones:                zones,
+		Parameters:           params,
+		ClientToken:          plan.ClientToken.ValueString(),
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("创建租户失败", err.Error())
+		resp.Diagnostics.AddError("Failed to create tenant", err.Error())
 		return
 	}
 	plan.ID = types.StringValue(strconv.FormatInt(tenantID, 10))
 	plan.Status = types.StringValue("CREATED")
+	tflog.Info(ctx, "created resource", map[string]interface{}{"type": "oceanbase_ob_tenant", "id": plan.ID.ValueString()})
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -166,9 +181,10 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	tflog.Trace(ctx, "reading resource", map[string]interface{}{"type": "oceanbase_ob_tenant", "id": state.ID.ValueString()})
 	id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
 	if err != nil {
-		resp.Diagnostics.AddError("租户 ID 无效", err.Error())
+		resp.Diagnostics.AddError("Invalid tenant ID", err.Error())
 		return
 	}
 	t, err := r.client.GetTenant(ctx, state.ClusterID.ValueInt64(), id)
@@ -178,7 +194,7 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("读取租户失败", err.Error())
+		resp.Diagnostics.AddError("Failed to read tenant", err.Error())
 		return
 	}
 	state.Status = types.StringValue(t.Status)
@@ -186,7 +202,7 @@ func (r *tenantResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r *tenantResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("不支持更新操作", "请重建资源以应用变更")
+	resp.Diagnostics.AddError("Update not supported", "Please recreate the resource to apply changes")
 }
 
 func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -195,9 +211,10 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	tflog.Info(ctx, "deleting resource", map[string]interface{}{"type": "oceanbase_ob_tenant", "id": state.ID.ValueString()})
 	id, err := strconv.ParseInt(state.ID.ValueString(), 10, 64)
 	if err != nil {
-		resp.Diagnostics.AddError("租户 ID 无效", err.Error())
+		resp.Diagnostics.AddError("Invalid tenant ID", err.Error())
 		return
 	}
 	if err := r.client.DeleteTenant(ctx, state.ClusterID.ValueInt64(), id); err != nil {
@@ -205,6 +222,6 @@ func (r *tenantResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if errorAsNotFound(err, &nfe) {
 			return
 		}
-		resp.Diagnostics.AddError("删除租户失败", err.Error())
+		resp.Diagnostics.AddError("Failed to delete tenant", err.Error())
 	}
 }

@@ -25,17 +25,17 @@ func TestCreateObproxy(t *testing.T) {
 		ObLinks:             []ObLinkParam{{ClusterName: "cl1"}},
 	})
 	if err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if obID != 11 {
-		t.Errorf("obID 不符：%d", obID)
+		t.Errorf("obID mismatch: %d", obID)
 	}
 }
 
 func TestGetObproxy(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v2/obproxy/clusters/11" {
-			t.Errorf("路径不符 %s", r.URL.Path)
+			t.Errorf("path mismatch %s", r.URL.Path)
 		}
 		_, _ = w.Write([]byte(`{"successful":true,"status":200,"data":{"id":11,"name":"px1","status":"RUNNING"}}`))
 	}))
@@ -43,10 +43,10 @@ func TestGetObproxy(t *testing.T) {
 	c := NewClient(srv.URL, "u", "p")
 	o, err := c.GetObproxy(context.Background(), 11)
 	if err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if o.Name != "px1" {
-		t.Errorf("响应不符：%+v", o)
+		t.Errorf("response mismatch: %+v", o)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestDeleteObproxy(t *testing.T) {
 		switch r.URL.Path {
 		case "/api/v2/obproxy/clusters/11":
 			if r.Method != "DELETE" {
-				t.Errorf("期望 DELETE，实际 %s", r.Method)
+				t.Errorf("expected DELETE, got %s", r.Method)
 			}
 			_, _ = w.Write([]byte(`{"successful":true,"status":200,"data":{"id":80001}}`))
 		case "/api/v2/tasks/80001":
@@ -66,6 +66,6 @@ func TestDeleteObproxy(t *testing.T) {
 	c := NewClient(srv.URL, "u", "p")
 	c.PollingInterval = 1
 	if err := c.DeleteObproxy(context.Background(), 11); err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

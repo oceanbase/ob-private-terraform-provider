@@ -29,7 +29,7 @@ type Client struct {
 
 type NotFoundError struct{ Path string }
 
-func (e *NotFoundError) Error() string { return "OCP 资源不存在：" + e.Path }
+func (e *NotFoundError) Error() string { return "OCP resource not found: " + e.Path }
 
 func NewClient(baseURL, username, password string) *Client {
 	return &Client{
@@ -60,14 +60,14 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body, resul
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return fmt.Errorf("序列化请求体失败：%w", err)
+			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
 		bodyReader = bytes.NewReader(b)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, bodyReader)
 	if err != nil {
-		return fmt.Errorf("构造请求失败：%w", err)
+		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.SetBasicAuth(c.Username, c.Password)
 	if body != nil {
@@ -76,13 +76,13 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body, resul
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("执行请求失败：%w", err)
+		return fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("读取响应体失败：%w", err)
+		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	if resp.StatusCode == 404 {
@@ -94,7 +94,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body, resul
 
 	var ocpResp ocpResponse
 	if err := json.Unmarshal(respBody, &ocpResp); err != nil {
-		return fmt.Errorf("解析响应失败：%w（响应体：%s）", err, string(respBody))
+		return fmt.Errorf("failed to unmarshal response: %w (body: %s)", err, string(respBody))
 	}
 	if !ocpResp.Successful {
 		if ocpResp.Error != nil {
@@ -104,7 +104,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body, resul
 	}
 	if result != nil && len(ocpResp.Data) > 0 {
 		if err := json.Unmarshal(ocpResp.Data, result); err != nil {
-			return fmt.Errorf("解析响应 data 字段失败：%w", err)
+			return fmt.Errorf("failed to unmarshal response data field: %w", err)
 		}
 	}
 	return nil

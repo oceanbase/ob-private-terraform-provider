@@ -10,12 +10,22 @@ type CreateClusterParam struct {
 	Type                 string              `json:"type"`
 	Password             string              `json:"password,omitempty"`
 	FullVersion          string              `json:"fullVersion,omitempty"`
+	ObClusterID          *int64              `json:"obClusterId,omitempty"`
 	Zones                []ZoneParam         `json:"zones"`
 	Attributes           *ClusterAttributes  `json:"attributes,omitempty"`
 	StartupParameters    []KVParam           `json:"startupParameters,omitempty"`
 	PrimaryZone          string              `json:"primaryZone,omitempty"`
+	ObproxyClusterIDs    []int64             `json:"obproxyClusterIds,omitempty"`
+	ObproxyUserName      string              `json:"obproxyUserName,omitempty"`
+	ObproxyUserPassword  string              `json:"obproxyUserPassword,omitempty"`
 	ArbitrationServiceID *int64              `json:"arbitrationServiceId,omitempty"`
 	PrimaryClusterInfo   *PrimaryClusterInfo `json:"primaryClusterInfo,omitempty"`
+	OversellingFactor    *int                `json:"oversellingFactor,omitempty"`
+	CgroupEnabled        *bool               `json:"cgroupEnabled,omitempty"`
+	CreateExtraTenant    bool                `json:"createExtraTenant,omitempty"`
+	SupportObsBackup     bool                `json:"supportObsBackup,omitempty"`
+	LoadType             string              `json:"loadType,omitempty"`
+	CheckID              string              `json:"checkId,omitempty"`
 	ClientToken          string              `json:"clientToken,omitempty"`
 }
 
@@ -26,14 +36,19 @@ type ZoneParam struct {
 	RpmName                string  `json:"rpmName"`
 	Architecture           string  `json:"architecture,omitempty"`
 	PackageOperatingSystem string  `json:"packageOperatingSystem,omitempty"`
+	RootServer             *int64  `json:"rootServer,omitempty"`
 }
 
+// ClusterAttributes uses PascalCase JSON keys to match OCP @JsonProperty annotations.
 type ClusterAttributes struct {
-	InstallPath  string `json:"InstallPath,omitempty"`
-	DataDiskPath string `json:"DataDiskPath,omitempty"`
-	LogDiskPath  string `json:"LogDiskPath,omitempty"`
-	SqlPort      *int   `json:"SqlPort,omitempty"`
-	SvrPort      *int   `json:"SvrPort,omitempty"`
+	InstallPath         string `json:"InstallPath,omitempty"`
+	RunPath             string `json:"RunPath,omitempty"`
+	DataDiskPath        string `json:"DataDiskPath,omitempty"`
+	LogDiskPath         string `json:"LogDiskPath,omitempty"`
+	DiskPathStyle       string `json:"DiskPathStyle,omitempty"`
+	OperatingSystemUser string `json:"OperatingSystemUser,omitempty"`
+	SqlPort             *int   `json:"SqlPort,omitempty"`
+	SvrPort             *int   `json:"SvrPort,omitempty"`
 }
 
 type PrimaryClusterInfo struct {
@@ -59,7 +74,7 @@ type createClusterResp struct {
 	ClusterID int64 `json:"clusterId"`
 }
 
-// CreateCluster 创建 OB 集群，返回 (taskID, clusterID, error)
+// CreateCluster creates an OB cluster and returns (taskID, clusterID, error)
 func (c *Client) CreateCluster(ctx context.Context, param CreateClusterParam) (int64, int64, error) {
 	var resp createClusterResp
 	if err := c.doRequest(ctx, "POST", "/api/v2/ob/clusters", param, &resp); err != nil {

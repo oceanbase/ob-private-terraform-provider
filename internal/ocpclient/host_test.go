@@ -24,10 +24,10 @@ func TestBatchCreateHostReturnsIDs(t *testing.T) {
 		SshPort:           22, Kind: "DEDICATED_PHYSICAL_MACHINE", IdcID: 1, TypeID: 1, CredentialID: 1,
 	})
 	if err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(ids) != 2 || ids[0] != 201 {
-		t.Errorf("ids 不符：%v", ids)
+		t.Errorf("ids mismatch: %v", ids)
 	}
 }
 
@@ -40,11 +40,11 @@ func TestGetHostNotFound(t *testing.T) {
 	c := NewClient(srv.URL, "u", "p")
 	_, err := c.GetHost(context.Background(), 999)
 	if err == nil {
-		t.Fatal("期望返回错误")
+		t.Fatal("expected an error")
 	}
 	var nfe *NotFoundError
 	if !asNotFoundError(err, &nfe) {
-		t.Errorf("期望 NotFoundError，实际 %T", err)
+		t.Errorf("expected NotFoundError, got %T", err)
 	}
 }
 
@@ -64,9 +64,9 @@ func TestListHosts(t *testing.T) {
 	c := NewClient(srv.URL, "u", "p")
 	lst, err := c.ListHosts(context.Background(), nil)
 	if err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(lst) != 1 {
-		t.Errorf("期望 1 个主机，实际 %d", len(lst))
+		t.Errorf("expected 1 host, got %d", len(lst))
 	}
 }

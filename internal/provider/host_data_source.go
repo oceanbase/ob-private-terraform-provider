@@ -39,8 +39,8 @@ func (d *hostsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id":     schema.StringAttribute{Computed: true},
-			"status": schema.StringAttribute{Optional: true, Description: "按主机状态过滤，如 AVAILABLE"},
-			"idc_id": schema.Int64Attribute{Optional: true, Description: "按 IDC ID 过滤"},
+			"status": schema.StringAttribute{Optional: true, Description: "Filter by host status, e.g. AVAILABLE"},
+			"idc_id": schema.Int64Attribute{Optional: true, Description: "Filter by IDC ID"},
 			"hosts": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
@@ -64,7 +64,7 @@ func (d *hostsDataSource) Configure(_ context.Context, req datasource.ConfigureR
 	}
 	c, ok := req.ProviderData.(*ocpclient.Client)
 	if !ok {
-		resp.Diagnostics.AddError("Provider 数据类型异常", fmt.Sprintf("实际收到 %T", req.ProviderData))
+		resp.Diagnostics.AddError("Unexpected provider data type", fmt.Sprintf("expected *ocpclient.Client, got %T", req.ProviderData))
 		return
 	}
 	d.client = c
@@ -83,7 +83,7 @@ func (d *hostsDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 	}
 	lst, err := d.client.ListHosts(ctx, filter)
 	if err != nil {
-		resp.Diagnostics.AddError("查询主机列表失败", err.Error())
+		resp.Diagnostics.AddError("Failed to list hosts", err.Error())
 		return
 	}
 	out := hostsDataSourceModel{ID: types.StringValue("hosts"), Status: cfg.Status, IdcID: cfg.IdcID}

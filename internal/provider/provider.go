@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/oceanbase/terraform-provider-oceanbase/internal/ocpclient"
 )
 
@@ -36,12 +37,12 @@ func (p *oceanbaseProvider) Metadata(_ context.Context, _ provider.MetadataReque
 func (p *oceanbaseProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"ocp_url":          schema.StringAttribute{Optional: true, Description: "OCP 服务地址，未设置时回退到 OCP_URL 环境变量"},
-			"username":         schema.StringAttribute{Optional: true, Description: "OCP 用户名，未设置时回退到 OCP_USERNAME 环境变量"},
-			"password":         schema.StringAttribute{Optional: true, Sensitive: true, Description: "OCP 密码，未设置时回退到 OCP_PASSWORD 环境变量"},
-			"task_mode":        schema.StringAttribute{Optional: true, Description: "异步任务模式：polling（默认）或 fire_and_forget"},
-			"polling_timeout":  schema.StringAttribute{Optional: true, Description: "异步任务最大等待时间，如 '30m'，默认 30m"},
-			"polling_interval": schema.StringAttribute{Optional: true, Description: "任务状态轮询间隔，如 '10s'，默认 10s"},
+			"ocp_url":          schema.StringAttribute{Optional: true, Description: "OCP service URL, falls back to OCP_URL environment variable"},
+			"username":         schema.StringAttribute{Optional: true, Description: "OCP username, falls back to OCP_USERNAME environment variable"},
+			"password":         schema.StringAttribute{Optional: true, Sensitive: true, Description: "OCP password, falls back to OCP_PASSWORD environment variable"},
+			"task_mode":        schema.StringAttribute{Optional: true, Description: "Async task mode: polling (default) or fire_and_forget"},
+			"polling_timeout":  schema.StringAttribute{Optional: true, Description: "Maximum wait time for async tasks, e.g. '30m', default 30m"},
+			"polling_interval": schema.StringAttribute{Optional: true, Description: "Task status polling interval, e.g. '10s', default 10s"},
 		},
 	}
 }
@@ -65,9 +66,11 @@ func (p *oceanbaseProvider) Configure(ctx context.Context, req provider.Configur
 	password := pick(cfg.Password, "OCP_PASSWORD")
 
 	if ocpURL == "" || username == "" || password == "" {
-		resp.Diagnostics.AddError("OCP 凭证缺失", "必须设置 ocp_url、username、password（可通过 HCL 或 OCP_URL/OCP_USERNAME/OCP_PASSWORD 环境变量）")
+		resp.Diagnostics.AddError("Missing OCP credentials", "ocp_url, username, and password must be set (via HCL or OCP_URL/OCP_USERNAME/OCP_PASSWORD environment variables)")
 		return
 	}
+
+	tflog.Info(ctx, "configuring OceanBase provider", map[string]interface{}{"ocp_url": ocpURL})
 
 	client := ocpclient.NewClient(ocpURL, username, password)
 	if !cfg.TaskMode.IsNull() && cfg.TaskMode.ValueString() != "" {
@@ -76,7 +79,7 @@ func (p *oceanbaseProvider) Configure(ctx context.Context, req provider.Configur
 	if !cfg.PollingTimeout.IsNull() && cfg.PollingTimeout.ValueString() != "" {
 		d, err := time.ParseDuration(cfg.PollingTimeout.ValueString())
 		if err != nil {
-			resp.Diagnostics.AddError("polling_timeout 无效", err.Error())
+			resp.Diagnostics.AddError("Invalid polling_timeout", err.Error())
 			return
 		}
 		client.PollingTimeout = d
@@ -84,7 +87,7 @@ func (p *oceanbaseProvider) Configure(ctx context.Context, req provider.Configur
 	if !cfg.PollingInterval.IsNull() && cfg.PollingInterval.ValueString() != "" {
 		d, err := time.ParseDuration(cfg.PollingInterval.ValueString())
 		if err != nil {
-			resp.Diagnostics.AddError("polling_interval 无效", err.Error())
+			resp.Diagnostics.AddError("Invalid polling_interval", err.Error())
 			return
 		}
 		client.PollingInterval = d

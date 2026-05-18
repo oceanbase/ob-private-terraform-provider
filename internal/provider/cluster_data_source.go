@@ -58,7 +58,7 @@ func (d *clustersDataSource) Configure(_ context.Context, req datasource.Configu
 	}
 	c, ok := req.ProviderData.(*ocpclient.Client)
 	if !ok {
-		resp.Diagnostics.AddError("Provider 数据类型异常", fmt.Sprintf("实际收到 %T", req.ProviderData))
+		resp.Diagnostics.AddError("Unexpected provider data type", fmt.Sprintf("expected *ocpclient.Client, got %T", req.ProviderData))
 		return
 	}
 	d.client = c
@@ -67,7 +67,7 @@ func (d *clustersDataSource) Configure(_ context.Context, req datasource.Configu
 func (d *clustersDataSource) Read(ctx context.Context, _ datasource.ReadRequest, resp *datasource.ReadResponse) {
 	list, err := d.client.ListClusters(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("查询集群列表失败", err.Error())
+		resp.Diagnostics.AddError("Failed to list clusters", err.Error())
 		return
 	}
 	state := clustersDataSourceModel{ID: types.StringValue("clusters")}

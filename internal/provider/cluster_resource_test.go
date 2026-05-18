@@ -15,7 +15,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 
 func testAccPreCheck(t *testing.T) {
 	if os.Getenv("OCP_URL") == "" || os.Getenv("OCP_USERNAME") == "" || os.Getenv("OCP_PASSWORD") == "" {
-		t.Fatal("验收测试需要设置 OCP_URL、OCP_USERNAME、OCP_PASSWORD 环境变量")
+		t.Fatal("acceptance tests require OCP_URL, OCP_USERNAME and OCP_PASSWORD environment variables")
 	}
 }
 
@@ -35,7 +35,7 @@ resource "oceanbase_ob_cluster" "test" {
 
 func TestAccClusterResource(t *testing.T) {
 	if os.Getenv("TF_ACC") == "" {
-		t.Skip("设置 TF_ACC=1 才会执行验收测试")
+		t.Skip("acceptance tests run only when TF_ACC=1 is set")
 	}
 	testAccPreCheck(t)
 	resource.Test(t, resource.TestCase{

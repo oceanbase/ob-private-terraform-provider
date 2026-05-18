@@ -7,15 +7,16 @@ import (
 )
 
 type CreateArbitrationParam struct {
-	HostID            int64     `json:"hostId,omitempty"`
-	RpmName           string    `json:"rpmName"`
-	InstallPath       string    `json:"installPath,omitempty"`
-	RunPath           string    `json:"runPath,omitempty"`
-	RunUser           string    `json:"runUser,omitempty"`
-	SvrPort           int       `json:"svrPort,omitempty"`
-	Description       string    `json:"description,omitempty"`
-	StartupParameters []KVParam `json:"startupParameters,omitempty"`
-	ClientToken       string    `json:"clientToken,omitempty"`
+	HostID               int64     `json:"hostId,omitempty"`
+	RpmName              string    `json:"rpmName"`
+	InstallPath          string    `json:"installPath,omitempty"`
+	RunPath              string    `json:"runPath,omitempty"`
+	RunUser              string    `json:"runUser,omitempty"`
+	SvrPort              int       `json:"svrPort,omitempty"`
+	Description          string    `json:"description,omitempty"`
+	ClogSymbolicLinkPath string    `json:"clogSymbolicLinkPath,omitempty"`
+	StartupParameters    []KVParam `json:"startupParameters,omitempty"`
+	ClientToken          string    `json:"clientToken,omitempty"`
 }
 
 type ArbitrationService struct {
@@ -29,7 +30,7 @@ type createArbResp struct {
 	ArbitrationServiceID int64 `json:"arbitrationServiceId"`
 }
 
-// IsArbitrationSupported 探测当前 OCP 是否支持仲裁服务（仅企业版）
+// IsArbitrationSupported probes whether the current OCP supports arbitration service (Enterprise Edition only)
 func (c *Client) IsArbitrationSupported(ctx context.Context) (bool, error) {
 	err := c.doRequest(ctx, "GET", "/api/v2/arbitration/services", nil, nil)
 	if err == nil {

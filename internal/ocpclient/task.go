@@ -20,8 +20,8 @@ func (c *Client) getTask(ctx context.Context, taskID int64) (*taskDetail, error)
 	return &task, nil
 }
 
-// WaitForTask 轮询直到任务 SUCCESSFUL、FAILED 或超时
-// TaskModeFireAndForget 模式下立即返回 nil
+// WaitForTask polls until the task reaches SUCCESSFUL, FAILED, or timeout.
+// In TaskModeFireAndForget mode, it returns nil immediately.
 func (c *Client) WaitForTask(ctx context.Context, taskID int64) error {
 	if c.TaskMode == TaskModeFireAndForget {
 		return nil
@@ -31,7 +31,7 @@ func (c *Client) WaitForTask(ctx context.Context, taskID int64) error {
 	for time.Now().Before(deadline) {
 		task, err := c.getTask(ctx, taskID)
 		if err != nil {
-			return fmt.Errorf("轮询任务 #%d 失败：%w", taskID, err)
+			return fmt.Errorf("failed to poll task #%d: %w", taskID, err)
 		}
 		switch task.Status {
 		case "SUCCESSFUL":

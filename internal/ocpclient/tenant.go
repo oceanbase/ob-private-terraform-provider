@@ -6,19 +6,22 @@ import (
 )
 
 type CreateTenantParam struct {
-	Name              string                 `json:"name"`
-	Mode              string                 `json:"mode,omitempty"`
-	PrimaryZone       string                 `json:"primaryZone,omitempty"`
-	Charset           string                 `json:"charset,omitempty"`
-	Collation         string                 `json:"collation,omitempty"`
-	Description       string                 `json:"description,omitempty"`
-	Whitelist         string                 `json:"whitelist,omitempty"`
-	TimeZone          string                 `json:"timeZone,omitempty"`
-	RootPassword      string                 `json:"rootPassword"`
-	EnableArbitration bool                   `json:"enableArbitration,omitempty"`
-	Zones             []TenantZoneParam      `json:"zones"`
-	Parameters        []TenantParameterParam `json:"parameters"`
-	ClientToken       string                 `json:"clientToken,omitempty"`
+	Name                 string                 `json:"name"`
+	Mode                 string                 `json:"mode,omitempty"`
+	PrimaryZone          string                 `json:"primaryZone,omitempty"`
+	Charset              string                 `json:"charset,omitempty"`
+	Collation            string                 `json:"collation,omitempty"`
+	Description          string                 `json:"description,omitempty"`
+	Whitelist            string                 `json:"whitelist,omitempty"`
+	TimeZone             string                 `json:"timeZone,omitempty"`
+	RootPassword         string                 `json:"rootPassword"`
+	EnableArbitration    bool                   `json:"enableArbitration,omitempty"`
+	SkipImportTenantInfo bool                   `json:"skipImportTenantInfo,omitempty"`
+	ServiceName          string                 `json:"serviceName,omitempty"`
+	LoadType             string                 `json:"loadType,omitempty"`
+	Zones                []TenantZoneParam      `json:"zones"`
+	Parameters           []TenantParameterParam `json:"parameters"`
+	ClientToken          string                 `json:"clientToken,omitempty"`
 }
 
 type TenantZoneParam struct {

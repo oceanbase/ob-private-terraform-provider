@@ -9,11 +9,16 @@ type CreateObproxyParam struct {
 	Name                string               `json:"name"`
 	Password            string               `json:"password,omitempty"`
 	ProxyroPassword     string               `json:"proxyroPassword,omitempty"`
+	Address             string               `json:"address,omitempty"`
+	Port                *int                 `json:"port,omitempty"`
 	WorkMode            string               `json:"workMode,omitempty"`
 	InstallPath         string               `json:"installPath,omitempty"`
+	RunPath             string               `json:"runPath,omitempty"`
+	RunUser             string               `json:"runUser,omitempty"`
 	ObproxyInstallParam *InstallObproxyParam `json:"obproxyInstallParam,omitempty"`
 	ObLinks             []ObLinkParam        `json:"obLinks,omitempty"`
 	StartupParameters   []KVParam            `json:"startupParameters,omitempty"`
+	Parameters          []KVParam            `json:"parameters,omitempty"`
 	ClientToken         string               `json:"clientToken,omitempty"`
 }
 
@@ -22,11 +27,13 @@ type InstallObproxyParam struct {
 	Version      string  `json:"version,omitempty"`
 	SqlPort      *int    `json:"sqlPort,omitempty"`
 	ExporterPort *int    `json:"exporterPort,omitempty"`
+	RpcPort      *int    `json:"rpcPort,omitempty"`
 }
 
 type ObLinkParam struct {
 	ClusterName string `json:"clusterName"`
 	ObClusterID int64  `json:"obClusterId,omitempty"`
+	Username    string `json:"username,omitempty"`
 }
 
 type Obproxy struct {

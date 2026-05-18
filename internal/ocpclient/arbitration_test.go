@@ -23,10 +23,10 @@ func TestCreateArbitration(t *testing.T) {
 		RpmName: "ob.rpm", HostID: 2,
 	})
 	if err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if aid != 5 {
-		t.Errorf("aid 不符：%d", aid)
+		t.Errorf("aid mismatch: %d", aid)
 	}
 }
 
@@ -38,10 +38,10 @@ func TestIsArbitrationSupportedTrue(t *testing.T) {
 	c := NewClient(srv.URL, "u", "p")
 	ok, err := c.IsArbitrationSupported(context.Background())
 	if err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if !ok {
-		t.Error("期望 supported=true")
+		t.Error("expected supported=true")
 	}
 }
 
@@ -54,10 +54,10 @@ func TestIsArbitrationSupportedFalse(t *testing.T) {
 	c := NewClient(srv.URL, "u", "p")
 	ok, err := c.IsArbitrationSupported(context.Background())
 	if err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if ok {
-		t.Error("期望 supported=false")
+		t.Error("expected supported=false")
 	}
 }
 
@@ -74,6 +74,6 @@ func TestDeleteArbitration(t *testing.T) {
 	c := NewClient(srv.URL, "u", "p")
 	c.PollingInterval = 1
 	if err := c.DeleteArbitration(context.Background(), 5); err != nil {
-		t.Fatalf("意外错误：%v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
