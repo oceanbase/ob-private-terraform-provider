@@ -17,10 +17,11 @@ override.tf.json
 terraform-provider-oceanbase
 dist/
 
-docs/superpowers/
+docs
 .idea/
 .claude/
 .vscode/
 *.swp
 *.swo
 *~
+CLAUDE.md
